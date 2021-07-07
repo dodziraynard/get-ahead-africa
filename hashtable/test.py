@@ -1,11 +1,17 @@
 import unittest
 from hashtable import HashTable
+from hypothesis import given, strategies as st
 
 
 class TestHashTable(unittest.TestCase):
     def setUp(self):
         self.hash_table = HashTable()
 
+    @given(st.integers(), st.integers())
+    def test_ints_are_commutative(self, key, value):
+        self.hash_table[key] = value
+        self.assertEqual(self.hash_table.get(key), value)
+        
     def test_insertion(self):
         self.hash_table["age"] = 55
         self.assertEqual(self.hash_table.get("age"), 55)
