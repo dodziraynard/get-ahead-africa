@@ -7,15 +7,11 @@ class TestHashTable(unittest.TestCase):
     def setUp(self):
         self.hash_table = HashTable()
 
-    @given(st.integers(), st.integers())
-    def test_ints_are_commutative(self, key, value):
+    @given(st.randoms(), st.randoms())
+    def test_insertion(self, key, value):
         self.hash_table[key] = value
         self.assertEqual(self.hash_table.get(key), value)
         
-    def test_insertion(self):
-        self.hash_table["age"] = 55
-        self.assertEqual(self.hash_table.get("age"), 55)
-
     def test_insert_function(self):
         self.hash_table.insert("age", 55)
         self.assertEqual(self.hash_table.get("age"), 55)
