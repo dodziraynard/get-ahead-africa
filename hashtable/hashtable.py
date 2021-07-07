@@ -1,19 +1,26 @@
 """ 
-Implmentation of a HashTable in python.
+Implmentation of a HashTable in Python.
 @author HELEGAH RAYNARD DODZI
 @email dodzireynard@gmail.com
 @date 06.05.2021
 """
+from collections import namedtuple
+from typing import Any
+
+Element = namedtuple("Element", "key, value")
+
 
 class HashTable:
-    """ Creating a new HashTable
+    """HasthTable stores key and value pairs with dynamic resizing.
+
+    Creating a new HashTable
             hash_table = HashTable()
 
         New HashTable with a specified initial size.
             hash_table = HashTable(65599)
 
         Inserting an item
-            hash_table.insert(key, value)
+            hash_table[key] = value
 
         Retrieving an item
             hash_table.get(key)
@@ -23,72 +30,95 @@ class HashTable:
 
         Getting the size of the hashtable
             len(hash_table)
-
     """
+    def __init__(self,
+                 init_size: int = 8,
+                 load_factor: float = 0.75,
+                 reduce_factor: float = 0.65,
+                 increment: float = 2.0,
+                 decrement: float = 0.6):
+        self._slot = [None for _ in range(init_size)]
+        self._size = 0
+        self._init_size = init_size
+        self._load_factor = load_factor
+        self._reduce_factor = reduce_factor
+        self._increment = increment
+        self._decrement = decrement
 
-    def __init__(self, size=65599):
-        self.table = [None for _ in range(size)]
-        self.table_size = 0
+    def _get_index(self, key):
+        return hash(key) % len(self._slot)
 
-    def _get_hash(self, key):
-        hash = 0
-        for c in key:
-            hash += ord(c)
-        return hash % len(self.table)
-    
-    def _resize(self, factor):
-        self.table_size = 0
-        new_table = [None for _ in range(int(len(self.table) * factor))]
-        old_table = self.table.copy()
-        self.table = new_table
+    def _resize(self, factor: float) -> None:
+        """Resizes the the available slots.
+        Args:
+            factor: The factor by which to resize the slots. factor < 1 reduces the slot
+            and factor > 1 increases the slots.
+        """
+        self._size = 0
+        old_table = self._slot.copy()
+        new_size = int(len(self._slot) * factor) if self._init_size < int(
+            len(self._slot) * factor) else self._init_size
+        self._slot = [None for _ in range(new_size)]
+
         for entry in old_table:
             if entry:
-                for item in entry:
-                    key = item[0]
-                    value = item[1]
-                    self.insert(key, value) 
+                for key, value in entry:
+                    self[key] = value
 
-    def insert(self, key, value):
-        '''Insert a new item with key and value into the hashtable.
-        '''
-        index = self._get_hash(key)
-        if self.table[index]:
-            for item in self.table[index]:
-                if item[0] == key:
-                    item[1] = value
+    def __setitem__(self, key, value):
+        index = self._get_index(key)
+        element = Element(key, value)
+
+        if self._slot[index]:
+            for sub_index, item in enumerate(self._slot[index]):
+                # Key already exists, override the value by replacing the element at that position.
+                if item.key == key:
+                    self._slot[index][sub_index] = element
                     return
-            self.table[index].append([key, value])
-            self.table_size += 1
+            # The key does not already exist.
+            self._slot[index].append(element)
         else:
-            self.table[index] = [[key, value]]
-            self.table_size += 1
+            self._slot[index] = [element]
+        self._size += 1
 
-        load_factor = self.table_size/len(self.table)
-        if load_factor > 0.75:
-            self._resize(2)
+        load_factor = self._size / len(self._slot)
+        if load_factor > self._load_factor:
+            self._resize(self._increment)
 
-    def delete(self, key):
-        '''Remove an item with speficied key from the hash table.
-        '''
-        index = self._get_hash(key)
-        if self.table[index]:
-            for i, item in enumerate(self.table[index]):
+    def __delitem__(self, key):
+        index = self._get_index(key)
+        if self._slot[index]:
+            for sub_index, item in enumerate(self._slot[index]):
                 if item[0] == key:
-                    self.table[index].remove(item)
-                    self.table_size -= 1
-        load_factor = self.table_size/len(self.table)
-        if load_factor < 0.5:
-            self._resize(0.6)
+                    del self._slot[index][sub_index]
+                    self._size -= 1
+        load_factor = self._size / len(self._slot)
+        if load_factor < self._reduce_factor:
+            self._resize(self._decrement)
 
-    def get(self, key):
-        '''Retrieve an item with the speficied key.
-        '''
-        index = self._get_hash(key)
-        if self.table[index]:
-            for item in self.table[index]:
+    def __getitem__(self, key):
+        index = self._get_index(key)
+        if self._slot[index]:
+            for item in self._slot[index]:
                 if item[0] == key:
                     return item[1]
         return None
-    
+
+    def insert(self, key: Any, value: Any):
+        """Inserts an item with the speficied key."""
+        self[key] = value
+
+    def get(self, key: Any) -> Any:
+        """Retrieves an item with the speficied key."""
+        return self[key]
+
+    def delete(self, key: Any) -> None:
+        """Deletes an item with the speficied key."""
+        del self[key]
+
+    def get_slot_size(self) -> int:
+        """Returns size of the slot"""
+        return len(self._slot)
+
     def __len__(self):
-        return self.table_size
+        return self._size
